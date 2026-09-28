@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Travel English AI Coach ✈️</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    .pulse-mic { animation: micPulse 1.2s infinite; }
+    @keyframes micPulse {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { transform: scale(1.08); box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+    .audio-wave {
+      display: inline-block; width: 3px; height: 12px; background-color: #3b82f6;
+      margin: 0 1px; border-radius: 2px; animation: wave 1s infinite ease-in-out;
+    }
+    @keyframes wave { 0%, 100% { height: 4px; } 50% { height: 16px; } }
+    .audio-wave:nth-child(2) { animation-delay: 0.2s; }
+    .audio-wave:nth-child(3) { animation-delay: 0.4s; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+      <div class="flex items-center space-x-3">
+        <div class="p-2.5 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl shadow-lg">
+          <i class="fa-solid fa-plane-departure text-xl text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight text-white">Travel English AI Coach</h1>
+          <p class="text-xs text-slate-400">Entrenador Conversacional con Fotos Reales & Soporte Móvil</p>
+        </div>
+      </div>
+
+      <!-- Selector Destino -->
+      <div class="flex items-center space-x-2 bg-slate-950 p-1 rounded-xl border border-slate-800">
+        <button id="btn-dest-us" onclick="setDestination('US')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white">🇺🇸 EE.UU. (US)</button>
+        <button id="btn-dest-uk" onclick="setDestination('UK')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white">🇬🇧 Londres (UK)</button>
+      </div>
+
+      <!-- Navegación y Configuración -->
+      <div class="flex items-center space-x-1">
+        <button onclick="switchTab('chat')" id="tab-btn-chat" class="px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 text-blue-400 border border-slate-700"><i class="fa-solid fa-comments"></i> Simulador</button>
+        <button onclick="switchTab('phrases')" id="tab-btn-phrases" class="px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white"><i class="fa-solid fa-book-open"></i> Frases Útiles</button>
+        <button onclick="switchTab('guide')" id="tab-btn-guide" class="px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white"><i class="fa-solid fa-compass"></i> Guía Cultural</button>
+        <button onclick="toggleSettings()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs ml-2" title="Ajustes de API"><i class="fa-solid fa-gear"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Banner Advertencia HTTPS -->
+  <div id="mobileHttpsBanner" class="hidden bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-xs text-amber-300 flex items-center justify-between">
+    <div class="flex items-center space-x-2">
+      <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+      <span><strong>Aviso Móvil:</strong> Para usar el micrófono en el móvil debes abrir este archivo mediante <strong>HTTPS</strong>.</span>
+    </div>
+    <button onclick="document.getElementById('mobileHttpsBanner').remove()" class="text-amber-400 font-bold px-2">✕</button>
+  </div>
+
+  <!-- Modal Ajustes API Gemini -->
+  <div id="settingsModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-md w-full shadow-2xl relative">
+      <h3 class="text-lg font-bold mb-2 text-white flex items-center"><i class="fa-solid fa-key text-amber-400 mr-2"></i> Clave API Gemini</h3>
+      <p class="text-xs text-slate-400 mb-4">Ingresa tu clave de Gemini para obtener respuestas conversacionales avanzadas. Si la dejas en blanco, funcionará en modo local inteligente.</p>
+      <input type="password" id="apiKeyInput" placeholder="Pega tu clave AIzaSy..." class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white mb-4 focus:outline-none focus:border-blue-500">
+      <div class="flex justify-between items-center">
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-blue-400 hover:underline">Obtener clave gratis</a>
+        <div class="flex space-x-2">
+          <button onclick="toggleSettings()" class="px-3.5 py-1.5 bg-slate-800 text-slate-300 rounded-xl text-xs">Cerrar</button>
+          <button onclick="saveSettings()" class="px-4 py-1.5 bg-blue-600 text-white rounded-xl text-xs">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor Principal Chat -->
+  <div id="tab-content-chat" class="max-w-6xl w-full mx-auto p-3 sm:p-4 flex-1 flex flex-col md:flex-row gap-4">
+    <!-- Lateral Escenarios -->
+    <aside class="w-full md:w-72 space-y-2 flex-shrink-0">
+      <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 px-2 py-1 flex justify-between">
+        <span>Escenarios de Viaje</span>
+        <span id="dest-badge" class="text-[10px] text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">EE.UU. 🇺🇸</span>
+      </p>
+      <div id="scenarios-container" class="space-y-1.5 max-h-[220px] md:max-h-[560px] overflow-y-auto pr-1"></div>
+    </aside>
+
+    <!-- Chat Box -->
+    <section class="flex-1 bg-slate-900/80 border border-slate-800 rounded-2xl flex flex-col h-[580px] sm:h-[650px] overflow-hidden shadow-xl">
+      <!-- Encabezado Avatar -->
+      <div class="bg-slate-950 border-b border-slate-800 p-3 flex items-center space-x-4">
+        <div class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-slate-700 flex-shrink-0 bg-slate-900 shadow-md">
+          <img id="avatarImg" src="" alt="Avatar Humano Real" class="w-full h-full object-cover relative z-0 transition-all duration-300">
+          <canvas id="lipCanvas" width="120" height="120" class="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"></canvas>
+          <div id="speechPulse" class="hidden absolute bottom-1 right-1 bg-emerald-500 w-3.5 h-3.5 rounded-full border-2 border-slate-950 animate-ping z-20"></div>
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center space-x-2 mb-1">
+            <h2 id="avatarTitle" class="font-bold text-sm sm:text-base text-white truncate">Agente de Embarque</h2>
+            <span id="avatarTag" class="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">JFK Terminal 4</span>
+          </div>
+          <p id="avatarSubtitle" class="text-xs text-slate-400 truncate mb-2">Facturación & Equipaje • JFK Terminal 4</p>
+          <div id="audioStatus" class="flex items-center space-x-2 text-xs text-slate-400">
+            <span class="text-[11px]"><i class="fa-solid fa-volume-high text-blue-400 mr-1"></i> Audio y respuesta listos</span>
+          </div>
+        </div>
+
+        <button onclick="repeatLastBotMessage()" class="p-2 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-xl text-xs" title="Repetir audio"><i class="fa-solid fa-rotate-right"></i></button>
+      </div>
+
+      <!-- Chat Messages -->
+      <div id="chatBox" class="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-950/40"></div>
+
+      <!-- Alerta Error de API o Micrófono -->
+      <div id="statusAlert" class="hidden mx-4 mb-2 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-300 flex items-center justify-between">
+        <span id="statusAlertMsg"><i class="fa-solid fa-circle-exclamation mr-1.5"></i> Alerta</span>
+        <button onclick="document.getElementById('statusAlert').classList.add('hidden')" class="text-amber-400 font-bold px-1">✕</button>
+      </div>
+
+      <!-- Banner Feedback -->
+      <div id="feedbackBanner" class="hidden mx-4 mb-2 p-3 bg-slate-900/90 border border-amber-500/30 rounded-xl text-xs space-y-1.5 shadow-lg">
+        <div class="font-bold text-amber-400 flex items-center justify-between border-b border-slate-800 pb-1">
+          <span class="flex items-center"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i> Corrección & Análisis de Expresión</span>
+        </div>
+        <div class="space-y-1 text-slate-300 pt-0.5">
+          <p id="feedbackOriginal" class="text-rose-300"><span class="font-semibold text-rose-400">❌ Dijiste:</span> "-"</p>
+          <p id="feedbackNatural" class="text-emerald-300"><span class="font-semibold text-emerald-400">✅ Opción Natural:</span> "-"</p>
+          <p id="feedbackExplanation" class="text-slate-300 italic"><span class="font-semibold text-amber-400 not-italic">💡 Explicación:</span> "-"</p>
+        </div>
+      </div>
+
+      <!-- Controles de Entrada -->
+      <div class="p-3 bg-slate-900 border-t border-slate-800 flex items-center space-x-2">
+        <button id="micBtn" onclick="toggleSpeech()" class="p-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition border border-slate-700 flex items-center justify-center min-w-[48px] touch-manipulation">
+          <i id="micIcon" class="fa-solid fa-microphone text-lg"></i>
+        </button>
+        <input type="text" id="userInput" placeholder="Escribe o habla en inglés aquí..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 text-white">
+        <button onclick="sendMessage()" class="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium transition flex items-center justify-center min-w-[48px] touch-manipulation">
+          <i class="fa-solid fa-paper-plane"></i>
+        </button>
+      </div>
+
+      <div class="px-4 py-1 bg-slate-950 border-t border-slate-900 flex justify-between items-center text-[10px] text-slate-500">
+        <span id="aiStatusIndicator"><i class="fa-solid fa-circle text-[8px] text-amber-500 mr-1"></i> Modo Simulado Local Activo</span>
+        <span class="font-mono">Studio Photo Avatars & Mobile Mic Ready</span>
+      </div>
+    </section>
+  </div>
+
+  <!-- Pestaña Frases Útiles -->
+  <div id="tab-content-phrases" class="hidden max-w-6xl w-full mx-auto p-4 flex-1">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+      <h2 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-book-open text-blue-400 mr-2"></i> Guía de Frases Imprescindibles</h2>
+      <div id="phrasesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+    </div>
+  </div>
+
+  <!-- Pestaña Guía Cultural -->
+  <div id="tab-content-guide" class="hidden max-w-6xl w-full mx-auto p-4 flex-1">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+      <h2 class="text-lg font-bold text-white"><i class="fa-solid fa-compass text-amber-400 mr-2"></i> Consejos de Viaje y Cultura</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+          <h3 class="font-bold text-blue-400 text-sm">✈️ En el Aeropuerto y Control</h3>
+          <p>Ten siempre tu pasaporte y billete de embarque a mano. En inglés aeroportuario se utiliza <strong>Gate</strong> para la puerta de embarque en lugar de <em>finger</em>.</p>
+        </div>
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+          <h3 class="font-bold text-emerald-400 text-sm">🏥 En Urgencias y Salud</h3>
+          <p>Para describir síntomas usa <em>"I have a..."</em> (fever, headache, sore throat) o <em>"I feel..."</em> (dizzy, nauseous).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DESTINATIONS = {
+      US: {
+        badge: "EE.UU. 🇺🇸",
+        lang: "en-US",
+        scenarios: [
+          {
+            id: 'airport', title: 'Facturación & Equipaje', location: 'JFK Terminal 4', role: 'Agente de Embarque', icon: '🛫',
+            imgUrl: 'https://images.unsplash.com/photo-1542296332-2e4473faf563?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 75, lipSkin: '#d38f7d',
+            greeting: "Good day! Welcome to JFK Airport check-in. Are you checking in any bags or do you need help with your boarding pass?",
+            promptContext: "You are an airline check-in agent at JFK Airport. Answer questions about gates, bags, and boarding passes clearly."
+          },
+          {
+            id: 'customs', title: 'Control de Pasaportes', location: 'JFK Airport', role: 'Oficial de Inmigración', icon: '🛂',
+            imgUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 76, lipSkin: '#d08f7b',
+            greeting: "Good day. Passport, please. What is the main purpose of your visit to the United States?",
+            promptContext: "You are a US Border officer at JFK. Answer questions about passport requirements and customs."
+          },
+          {
+            id: 'hospital', title: 'Salud & Urgencias', location: 'Mount Sinai Hospital', role: 'Doctor / Enfermero', icon: '🏥',
+            imgUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 75, lipSkin: '#c58271',
+            greeting: "Hello. I am Dr. Miller. What symptoms are you experiencing today and how can I assist you?",
+            promptContext: "You are an ER doctor in NYC. Assist patients with health concerns politely."
+          },
+          {
+            id: 'hotel', title: 'Hotel Check-in', location: 'Manhattan Hotel', role: 'Recepcionista', icon: '🏨',
+            imgUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 75, lipSkin: '#cc8b78',
+            greeting: "Welcome to The Manhattan Hotel! How can I help you with your reservation or check-in today?",
+            promptContext: "You are a polite hotel front desk receptionist in NYC."
+          },
+          {
+            id: 'transit', title: 'Metro & Taxi', location: 'Subway Station', role: 'Conductor / Agente', icon: '🏙️',
+            imgUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 74, lipSkin: '#b87964',
+            greeting: "Hey there! Need directions or help getting a MetroCard for the subway?",
+            promptContext: "You are a NYC transit assistant or taxi driver."
+          },
+          {
+            id: 'dining', title: 'Restaurante & Cafetería', location: 'Brooklyn Diner', role: 'Camarera / Barista', icon: '🍔',
+            imgUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 75, lipSkin: '#e09885',
+            greeting: "Hi! Welcome to Brooklyn Diner. Table for how many today?",
+            promptContext: "You are a friendly waitress at a diner in NYC."
+          },
+          {
+            id: 'tourism', title: 'Turismo & Excursiones', location: 'Empire State', role: 'Guía Turístico', icon: '🗽',
+            imgUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 76, lipSkin: '#d38c77',
+            greeting: "Hello! Looking for observatory tickets or information on city tours today?",
+            promptContext: "You are an enthusiastic NYC tour guide."
+          },
+          {
+            id: 'shopping', title: 'Compras & Farmacia', location: 'Fifth Avenue', role: 'Atención al Cliente', icon: '🛍️',
+            imgUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 74, lipSkin: '#bd7b68',
+            greeting: "Hi! How can I help you find what you are looking for today?",
+            promptContext: "You are a retail assistant in New York."
+          }
+        ]
+      },
+      UK: {
+        badge: "Londres 🇬🇧",
+        lang: "en-GB",
+        scenarios: [
+          {
+            id: 'airport', title: 'Check-in & Baggage', location: 'Heathrow T5', role: 'Airline Agent', icon: '🛫',
+            imgUrl: 'https://images.unsplash.com/photo-1542296332-2e4473faf563?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 75, lipSkin: '#d38f7d',
+            greeting: "Good day! Welcome to Heathrow Terminal 5. How may I help you with your flight or luggage today?",
+            promptContext: "You are British Airways check-in staff at Heathrow."
+          },
+          {
+            id: 'customs', title: 'Border Control', location: 'Heathrow Airport', role: 'Border Officer', icon: '🛂',
+            imgUrl: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 75, lipSkin: '#d38f7d',
+            greeting: "Good day. Passport, please. What is the reason for your visit to the UK?",
+            promptContext: "You are a British Border Officer at Heathrow."
+          },
+          {
+            id: 'hospital', title: 'Medical & NHS Care', location: "St Thomas' Hospital", role: 'NHS Doctor', icon: '🏥',
+            imgUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 75, lipSkin: '#c58271',
+            greeting: "Good day. Please take a seat. What symptoms are you experiencing today?",
+            promptContext: "You are an NHS medical officer in London."
+          },
+          {
+            id: 'hotel', title: 'Hotel Reception', location: 'London Hotel', role: 'Concierge', icon: '🏨',
+            imgUrl: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 75, lipSkin: '#ce8875',
+            greeting: "Good day! Welcome to The Grand London. How may I assist with your stay today?",
+            promptContext: "You are a polite London hotel receptionist."
+          },
+          {
+            id: 'transit', title: 'Tube & Black Cab', location: 'Underground', role: 'Cab Driver', icon: '🚇',
+            imgUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 74, lipSkin: '#b87762',
+            greeting: "Hello mate! Mind the gap! Where are you heading in London today?",
+            promptContext: "You are a London cab driver or Tube staff."
+          },
+          {
+            id: 'dining', title: 'Pub & Restaurant', location: 'Covent Garden Pub', role: 'Bartender', icon: '🍺',
+            imgUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 75, lipSkin: '#c2816d',
+            greeting: "Alright? What can I get for you at the bar today?",
+            promptContext: "You are a London pub bartender."
+          },
+          {
+            id: 'tourism', title: 'Sightseeing', location: 'British Museum', role: 'Museum Host', icon: '🏰',
+            imgUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 76, lipSkin: '#dc9381',
+            greeting: "Welcome! Are you here for the main exhibitions today?",
+            promptContext: "You are a guide at a London museum."
+          },
+          {
+            id: 'shopping', title: 'Shops & Pharmacy', location: 'Oxford Street', role: 'Shop Assistant', icon: '🛍️',
+            imgUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
+            mouthX: 60, mouthY: 75, lipSkin: '#d68e7b',
+            greeting: "Hello! How can I assist you with your shopping today?",
+            promptContext: "You are a London shop assistant."
+          }
+        ]
+      }
+    };
+
+    const PHRASES = [
+      { category: "Aeropuerto", es: "¿Dónde está la puerta de embarque?", en: "Where is the boarding gate?" },
+      { category: "Aeropuerto", es: "Tengo dos maletas para facturar.", en: "I have two bags to check in." },
+      { category: "Aeropuerto", es: "¿Necesito mostrar mi pasaporte ahora?", en: "Do I need to show my passport now?" },
+      { category: "Salud", es: "Necesito ver a un médico de urgencia.", en: "I need to see a doctor urgently." },
+      { category: "Salud", es: "Me siento mal y tengo fiebre.", en: "I feel sick and I have a fever." },
+      { category: "Inmigración", es: "¿Cuánto tiempo se quedará?", en: "How long do you plan to stay?" },
+      { category: "Hotel", es: "Tengo una reserva a nombre de...", en: "I have a reservation under the name of..." },
+      { category: "Restaurante", es: "¿Me trae la cuenta, por favor?", en: "Could I get the check, please?" }
+    ];
+
+    let currentDestinationKey = 'US';
+    let currentScenarioId = 'airport';
+    let apiKey = localStorage.getItem('travel_ai_key') || '';
+    let isListening = false;
+    let recognition = null;
+    let lastBotMessageText = "";
+    let lipCanvas, lipCtx;
+
+    window.onload = () => {
+      if (apiKey) document.getElementById('apiKeyInput').value = apiKey;
+      lipCanvas = document.getElementById('lipCanvas');
+      lipCtx = lipCanvas.getContext('2d');
+      
+      checkHttpsMobileWarning();
+      initSpeechRecognition();
+      renderScenarios();
+      renderPhrases();
+      setScenario('airport');
+      updateAIStatusIndicator();
+
+      setInterval(renderLipSyncAnimation, 50);
+    };
+
+    function checkHttpsMobileWarning() {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (isMobile && !isSecure) {
+        document.getElementById('mobileHttpsBanner').classList.remove('hidden');
+      }
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('[id^="tab-content-"]').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`tab-content-${tab}`).classList.remove('hidden');
+    }
+
+    function setDestination(dest) {
+      currentDestinationKey = dest;
+      document.getElementById('dest-badge').innerText = DESTINATIONS[dest].badge;
+      document.getElementById('btn-dest-us').className = dest === 'US' ? "px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white" : "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white";
+      document.getElementById('btn-dest-uk').className = dest === 'UK' ? "px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white" : "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white";
+      renderScenarios();
+      setScenario(currentScenarioId);
+    }
+
+    function renderScenarios() {
+      const container = document.getElementById('scenarios-container');
+      container.innerHTML = '';
+      DESTINATIONS[currentDestinationKey].scenarios.forEach(s => {
+        const btn = document.createElement('button');
+        btn.id = `scenario-btn-${s.id}`;
+        btn.onclick = () => setScenario(s.id);
+        btn.className = `w-full text-left p-2.5 rounded-xl border transition flex items-center space-x-3 ${s.id === currentScenarioId ? 'border-blue-500/50 bg-blue-500/10' : 'border-slate-800 bg-slate-900/60 hover:bg-slate-800'}`;
+        btn.innerHTML = `<span class="text-xl">${s.icon}</span><div class="min-w-0 flex-1"><div class="font-semibold text-xs text-slate-100 truncate">${s.title}</div><div class="text-[10px] text-slate-400 truncate">${s.location}</div></div>`;
+        container.appendChild(btn);
+      });
+    }
+
+    function setScenario(id) {
+      currentScenarioId = id;
+      const scenario = DESTINATIONS[currentDestinationKey].scenarios.find(s => s.id === id) || DESTINATIONS[currentDestinationKey].scenarios[0];
+      
+      document.getElementById('avatarImg').src = scenario.imgUrl;
+      document.getElementById('avatarTitle').innerText = scenario.role;
+      document.getElementById('avatarSubtitle').innerText = scenario.title + " • " + scenario.location;
+      document.getElementById('avatarTag').innerText = scenario.location;
+      document.getElementById('chatBox').innerHTML = '';
+      document.getElementById('feedbackBanner').classList.add('hidden');
+
+      document.querySelectorAll('[id^="scenario-btn-"]').forEach(b => {
+        b.classList.remove('border-blue-500/50', 'bg-blue-500/10');
+        b.classList.add('border-slate-800', 'bg-slate-900/60');
+      });
+      const activeBtn = document.getElementById(`scenario-btn-${id}`);
+      if (activeBtn) activeBtn.classList.add('border-blue-500/50', 'bg-blue-500/10');
+
+      addBotMessage(scenario.greeting);
+      speakText(scenario.greeting);
+    }
+
+    function renderLipSyncAnimation() {
+      if (!lipCtx) return;
+      lipCtx.clearRect(0, 0, lipCanvas.width, lipCanvas.height);
+
+      const isSpeaking = window.speechSynthesis && window.speechSynthesis.speaking;
+      document.getElementById('speechPulse').classList.toggle('hidden', !isSpeaking);
+
+      if (isSpeaking) {
+        const scenario = DESTINATIONS[currentDestinationKey].scenarios.find(s => s.id === currentScenarioId) || DESTINATIONS[currentDestinationKey].scenarios[0];
+        const mx = scenario.mouthX || 60;
+        const my = scenario.mouthY || 75;
+        const openVal = 2 + Math.abs(Math.sin(Date.now() * 0.02) * 7);
+
+        lipCtx.save();
+        lipCtx.fillStyle = '#4a0e0e';
+        lipCtx.beginPath();
+        lipCtx.ellipse(mx, my, 8, openVal, 0, 0, Math.PI * 2);
+        lipCtx.fill();
+
+        lipCtx.fillStyle = '#ffffff';
+        lipCtx.fillRect(mx - 5, my - openVal + 1, 10, 2);
+
+        lipCtx.strokeStyle = scenario.lipSkin || '#c27d6b';
+        lipCtx.lineWidth = 2.5;
+        lipCtx.beginPath();
+        lipCtx.arc(mx, my - 1, 8, 1.1 * Math.PI, 1.9 * Math.PI);
+        lipCtx.stroke();
+        lipCtx.beginPath();
+        lipCtx.arc(mx, my + 1, 8, 0.1 * Math.PI, 0.9 * Math.PI);
+        lipCtx.stroke();
+        lipCtx.restore();
+      }
+    }
+
+    function speakText(text) {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      lastBotMessageText = text;
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = DESTINATIONS[currentDestinationKey].lang;
+      utterance.rate = 0.95;
+
+      utterance.onstart = () => {
+        document.getElementById('audioStatus').innerHTML = `
+          <div class="flex items-center text-emerald-400 font-semibold">
+            <span class="audio-wave"></span><span class="audio-wave"></span><span class="audio-wave"></span>
+            <span class="ml-2 text-[11px]">Hablando con audio real...</span>
+          </div>`;
+      };
+
+      utterance.onend = () => {
+        document.getElementById('audioStatus').innerHTML = `<span class="text-[11px]"><i class="fa-solid fa-volume-high text-blue-400 mr-1"></i> Audio y respuesta listos</span>`;
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function repeatLastBotMessage() {
+      if (lastBotMessageText) speakText(lastBotMessageText);
+    }
+
+    function initSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) return;
+
+      try {
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = () => {
+          isListening = true;
+          document.getElementById('micBtn').classList.add('bg-red-600', 'pulse-mic');
+          document.getElementById('statusAlert').classList.add('hidden');
+        };
+
+        recognition.onend = () => {
+          isListening = false;
+          document.getElementById('micBtn').classList.remove('bg-red-600', 'pulse-mic');
+        };
+
+        recognition.onerror = (event) => {
+          isListening = false;
+          document.getElementById('micBtn').classList.remove('bg-red-600', 'pulse-mic');
+          showAlert("Error de micrófono: " + event.error);
+        };
+
+        recognition.onresult = (e) => {
+          if (e.results && e.results[0] && e.results[0][0]) {
+            document.getElementById('userInput').value = e.results[0][0].transcript;
+            sendMessage();
+          }
+        };
+      } catch (err) {
+        console.warn("Speech init error:", err);
+      }
+    }
+
+    function showAlert(msg) {
+      const alertEl = document.getElementById('statusAlert');
+      document.getElementById('statusAlertMsg').innerHTML = `<i class="fa-solid fa-circle-exclamation mr-1.5"></i> ${msg}`;
+      alertEl.classList.remove('hidden');
+    }
+
+    function toggleSpeech() {
+      if (!recognition) {
+        showAlert("Reconocimiento de voz no disponible en este navegador.");
+        return;
+      }
+      if (isListening) {
+        recognition.stop();
+      } else {
+        try {
+          recognition.lang = DESTINATIONS[currentDestinationKey].lang;
+          recognition.start();
+        } catch (e) {
+          showAlert("No se pudo iniciar el micrófono. Verifica permisos HTTPS.");
+        }
+      }
+    }
+
+    function addBotMessage(text) {
+      const chatBox = document.getElementById('chatBox');
+      const scenario = DESTINATIONS[currentDestinationKey].scenarios.find(s => s.id === currentScenarioId);
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'flex items-start space-x-3 mb-3';
+      msgDiv.innerHTML = `
+        <div class="text-lg p-2 bg-slate-900 border border-slate-800 rounded-xl">${scenario.icon}</div>
+        <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl max-w-[85%] shadow-sm">
+          <div class="text-[11px] text-blue-400 font-semibold mb-1">${scenario.role}</div>
+          <div class="text-sm text-slate-100 leading-relaxed">${text}</div>
+          <button onclick="speakText('${text.replace(/'/g, "\\'")}')" class="mt-2 text-[11px] text-slate-400 hover:text-white flex items-center"><i class="fa-solid fa-volume-high mr-1"></i> Escuchar de nuevo</button>
+        </div>`;
+      chatBox.appendChild(msgDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function addUserMessage(text) {
+      const chatBox = document.getElementById('chatBox');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'flex items-start justify-end space-x-3 mb-3';
+      msgDiv.innerHTML = `
+        <div class="bg-blue-600 p-3.5 rounded-2xl max-w-[85%] text-white text-sm shadow-md">${text}</div>
+        <div class="text-lg p-2 bg-blue-950 border border-blue-800 rounded-xl">👤</div>`;
+      chatBox.appendChild(msgDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('userInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      addUserMessage(text);
+      input.value = '';
+
+      if (apiKey) {
+        callGeminiAPI(text);
+      } else {
+        setTimeout(() => processLocalSimulation(text), 400);
+      }
+    }
+
+    async function callGeminiAPI(userText) {
+      const scenario = DESTINATIONS[currentDestinationKey].scenarios.find(s => s.id === currentScenarioId);
+      const cleanKey = apiKey.trim();
+
+      const prompt = `System Instruction: ${scenario.promptContext}
+      User input: "${userText}"
+      Task: Respond in character (1-2 conversational sentences in English). Directly answer user's questions.
+      Then evaluate user's sentence.
+      Format:
+      [BOT_RESPONSE]
+      (Your response)
+      [CORRECTION]
+      Natural: (Improved natural sentence in English)
+      Explanation: (Brief explanation in Spanish about grammar or tone)`;
+
+      try {
+        // MODELO OFICIAL Y VALIDO: gemini-2.0-flash
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${cleanKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          const errMsg = errBody.error?.message || `HTTP ${res.status}`;
+          throw new Error(errMsg);
+        }
+
+        const data = await res.json();
+        const fullText = data.candidates[0].content.parts[0].text;
+
+        let botReply = fullText;
+        let natural = userText;
+        let explanation = "Frase evaluada por IA correctamente.";
+
+        if (fullText.includes('[BOT_RESPONSE]')) {
+          const parts = fullText.split('[CORRECTION]');
+          botReply = parts[0].replace('[BOT_RESPONSE]', '').trim();
+          if (parts[1]) {
+            const natMatch = parts[1].match(/Natural:\s*(.+)/);
+            const expMatch = parts[1].match(/Explanation:\s*(.+)/);
+            if (natMatch) natural = natMatch[1].trim();
+            if (expMatch) explanation = expMatch[1].trim();
+          }
+        }
+
+        addBotMessage(botReply);
+        speakText(botReply);
+        showFeedback(userText, natural, explanation);
+        document.getElementById('statusAlert').classList.add('hidden');
+      } catch (e) {
+        console.warn("Fallo API Gemini:", e);
+        showAlert(`Error de API: ${e.message}. Usando simulador local de reserva.`);
+        processLocalSimulation(userText);
+      }
+    }
+
+    // SIMULADOR LOCAL INTELIGENTE Y DINÁMICO
+    function processLocalSimulation(userText) {
+      const lower = userText.toLowerCase();
+      let botReply = "";
+      let natural = userText;
+      let explanation = "Tu frase es comprensible. Procura mantener un estilo natural y educado.";
+
+      if (lower.includes('name') || lower.includes('who are you') || lower.includes('nombre')) {
+        botReply = "I am your service agent here! How can I help you today?";
+        natural = "May I ask what your name is?";
+        explanation = "Para preguntar el nombre de forma educada, utiliza 'May I ask your name?'.";
+      }
+      else if (lower.includes('exit') || lower.includes('way out') || lower.includes('salida')) {
+        botReply = "The main exit is straight ahead, right past the baggage claim area.";
+        natural = "Could you tell me where the exit is, please?";
+        explanation = "Para preguntar por la salida usa 'Where the exit is'. Añade 'please' al final para sonar formal.";
+      }
+      else if (lower.includes('gate') || lower.includes('finger')) {
+        botReply = "Gate 25A is located straight down this concourse on your right. Boarding starts in 15 minutes.";
+        natural = "Could you tell me where Gate 25A is, please?";
+        explanation = "En inglés aeroportuario se utiliza la palabra 'Gate' o 'Boarding Gate' en lugar de 'finger'.";
+      }
+      else if (lower.includes('restroom') || lower.includes('bathroom') || lower.includes('toilet') || lower.includes('baño')) {
+        botReply = "The restrooms are located just around the corner on your left.";
+        natural = "Excuse me, where is the nearest restroom?";
+        explanation = "En EE.UU. se utiliza 'restroom' o 'bathroom', mientras que en Reino Unido es habitual decir 'toilet'.";
+      }
+      else if (lower.includes('passport') || lower.includes('pasaporte')) {
+        botReply = "Thank you! Everything looks in order with your documentation. Have a pleasant flight!";
+        natural = "Here is my passport and travel document.";
+        explanation = "Expresión formal y adecuada para entregar documentación a un agente.";
+      }
+      else if (lower.includes('bag') || lower.includes('luggage') || lower.includes('maleta')) {
+        botReply = "Please place your bags on the scale. Are you checking any extra items?";
+        natural = "I would like to check in two bags, please.";
+        explanation = "Recuerda la diferencia entre 'checked bag' (facturada) y 'carry-on' (de mano).";
+      }
+      else if (lower.includes('hello') || lower.includes('hi') || lower.includes('good morning') || lower.includes('hola')) {
+        botReply = "Good day! How can I assist you with your travel plans today?";
+        natural = "Good morning! How are you?";
+        explanation = "Saludo formal y cortesía básica para iniciar una consulta.";
+      }
+      else {
+        botReply = "I understand! Let me check that information for you. Is there anything else you need?";
+        natural = userText;
+        explanation = "Frase comprensible. Añadir 'Excuse me' al inicio te ayudará a sonar más educado.";
+      }
+
+      addBotMessage(botReply);
+      speakText(botReply);
+      showFeedback(userText, natural, explanation);
+    }
+
+    function showFeedback(original, natural, explanation) {
+      document.getElementById('feedbackOriginal').innerHTML = `<span class="font-semibold text-rose-400">❌ Dijiste/Escribiste:</span> "${original}"`;
+      document.getElementById('feedbackNatural').innerHTML = `<span class="font-semibold text-emerald-400">✅ Opción Natural:</span> "${natural}"`;
+      document.getElementById('feedbackExplanation').innerHTML = `<span class="font-semibold text-amber-400 not-italic">💡 Explicación:</span> ${explanation}`;
+      document.getElementById('feedbackBanner').classList.remove('hidden');
+    }
+
+    function renderPhrases() {
+      const grid = document.getElementById('phrasesGrid');
+      grid.innerHTML = '';
+      PHRASES.forEach(p => {
+        const card = document.createElement('div');
+        card.className = "bg-slate-950 border border-slate-800 p-3 rounded-xl flex justify-between items-center";
+        card.innerHTML = `
+          <div>
+            <span class="text-[10px] text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">${p.category}</span>
+            <div class="text-xs text-white font-medium mt-1">${p.en}</div>
+            <div class="text-xs text-slate-400">${p.es}</div>
+          </div>
+          <button onclick="speakText('${p.en.replace(/'/g, "\\'")}')" class="p-2.5 bg-slate-900 border border-slate-700 text-slate-300 rounded-lg text-xs touch-manipulation"><i class="fa-solid fa-volume-high"></i></button>`;
+        grid.appendChild(card);
+      });
+    }
+
+    function toggleSettings() { document.getElementById('settingsModal').classList.toggle('hidden'); }
+    function saveSettings() {
+      apiKey = document.getElementById('apiKeyInput').value.trim();
+      localStorage.setItem('travel_ai_key', apiKey);
+      toggleSettings();
+      updateAIStatusIndicator();
+    }
+
+    function updateAIStatusIndicator() {
+      const el = document.getElementById('aiStatusIndicator');
+      if (apiKey) {
+        el.innerHTML = `<i class="fa-solid fa-circle text-[8px] text-emerald-500 mr-1"></i> Modo Gemini IA Activo`;
+      } else {
+        el.innerHTML = `<i class="fa-solid fa-circle text-[8px] text-amber-500 mr-1"></i> Modo Simulado Local Activo`;
+      }
+    }
+
+    document.getElementById('userInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+  </script>
+</body>
+</html>
